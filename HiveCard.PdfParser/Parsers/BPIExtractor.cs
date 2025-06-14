@@ -46,35 +46,44 @@ namespace HiveCard.PdfParser.Parsers
                     Console.WriteLine($"{x}: {lines[x]}");
                 }
 
+
+
                 if (i == 0 && lines.Length >= 6)
                 {
-                    //// First page - extract summary
-                    //bankStatement.AccountNumber = GetAccountNumber(lines[10]);
-                    //bankStatement.StatementDate = GetStatementDate(lines[11]);
-                    //bankStatement.PaymentDueDate = GetPaymentDueDate(lines[12]);
-                    //bankStatement.TotalAmount = GetTotalAmount(lines[14]);
-                    //bankStatement.MinimumAmountDue = GetMinimumAmountDue(lines[16]);
+                    // First page - extract summary
+                    bankStatement.AccountNumber = GetAccountNumber(lines[10].Trim());
+                    bankStatement.StatementDate = GetStatementDate(lines[11].Trim());
+                    bankStatement.PaymentDueDate = GetPaymentDueDate(lines[12].Trim());
+                    bankStatement.TotalAmount = GetTotalAmount(lines[14].Trim());
+                    bankStatement.MinimumAmountDue = GetMinimumAmountDue(lines[16].Trim());
 
-                    var labelMap = ExtractLabeledValues(lines);
-
-
-                    bankStatement.AccountNumber = labelMap.GetValueOrDefault("CUSTOMER NUMBER", "");
-                    bankStatement.StatementDate = labelMap.GetValueOrDefault("STATEMENT DATE", "");
-                    bankStatement.PaymentDueDate = labelMap.GetValueOrDefault("PAYMENT DUE DATE", "");
-                    bankStatement.TotalAmount = labelMap.GetValueOrDefault("TOTAL AMOUNT DUE", "");
-                    bankStatement.MinimumAmountDue = labelMap.GetValueOrDefault("MINIMUM AMOUNT DUE", "");
                 }
                 else
                 {
                     // Other pages - extract transactions
                     bankStatement.Activities.AddRange(GetCardActivities(lines));
                 }
+
+
+
+
             }
 
             // Optional: write JSON output
             File.WriteAllText("Output/extracted.json", JsonConvert.SerializeObject(bankStatement, Formatting.Indented));
             return bankStatement;
         }
+
+
+        private string GetValueAfter(List<string> lines, string keyword)
+        {
+            int index = lines.FindIndex(l => l.Equals(keyword, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0 && index + 1 < lines.Count)
+                return lines[index + 1].Trim();
+            return string.Empty;
+        }
+
+
         private List<ExtractedTransaction> ParseText(string ocrText)
         {
             var transactions = new List<ExtractedTransaction>();
@@ -100,11 +109,16 @@ namespace HiveCard.PdfParser.Parsers
             return transactions;
         }
 
-        private string GetAccountNumber(string str) => CommonExtract(str, 2);
-        private string GetStatementDate(string str) => CommonExtract(str, 2);
-        private string GetPaymentDueDate(string str) => CommonExtract(str, 3);
-        private string GetTotalAmount(string str) => CommonExtract(str, 3);
-        private string GetMinimumAmountDue(string str) => CommonExtract(str, 3);
+        //private string GetAccountNumber(string str) => CommonExtract(str, 2);
+        //private string GetStatementDate(string str) => CommonExtract(str, 2);
+        //private string GetPaymentDueDate(string str) => CommonExtract(str, 3);
+        //private string GetTotalAmount(string str) => CommonExtract(str, 3);
+        //private string GetMinimumAmountDue(string str) => CommonExtract(str, 3);
+        private string GetAccountNumber(string str) => str;
+        private string GetStatementDate(string str) => str;
+        private string GetPaymentDueDate(string str) => str;
+        private string GetTotalAmount(string str) => str;
+        private string GetMinimumAmountDue(string str) => str;
 
         private string CommonExtract(string str, int numSpace)
         {
