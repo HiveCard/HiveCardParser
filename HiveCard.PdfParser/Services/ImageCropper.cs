@@ -6,19 +6,44 @@ namespace HiveCard.PdfParser.Services
 {
     public static class ImageCropper
     {
+        private static readonly int[] _accSummaryCoordinates = new int[] { 1050, 460, 0, 0, 1050, 460, 1340, 530, 1050, 460 };
+        private static readonly int[] _breakDownListCoordinates = new int[] { 2060, 2300, 0, 0, 2060, 2300, 200, 940, 2060, 2300 };
+
         public static List<string> CropImages(List<string> imagePaths)
         {
             var croppedPaths = new List<string>();
-            foreach (var path in imagePaths)
+
+            for (int i = 0; i < imagePaths.Count; i++)
             {
-                using var image = new MagickImage(path);
-                var cropped = image.Clone();
-                cropped.Crop(new MagickGeometry(100, 100, 800, 600)); // dummy crop area
-                var croppedPath = Path.Combine("Output", Path.GetFileNameWithoutExtension(path) + "-cropped.png");
-                cropped.Write(croppedPath);
-                croppedPaths.Add(croppedPath);
+                int[] coords = (i == 0) ? _accSummaryCoordinates : _breakDownListCoordinates;
+
+                var croppedPath = CropImage(imagePaths[i], coords);
+                if (croppedPath != null)
+                    croppedPaths.Add(croppedPath);
             }
+
             return croppedPaths;
+        }
+
+        private static string CropImage(string imagePath, int[] arr)
+        {
+            string croppedPath = Path.Combine(
+                Path.GetDirectoryName(imagePath),
+                Path.GetFileNameWithoutExtension(imagePath) + "-cropped.png"
+            );
+
+            using var image = new MagickImage(imagePath);
+
+            var cropArea = new MagickGeometry(arr[6], arr[7], arr[8], arr[9])
+            {
+                IgnoreAspectRatio = true
+            };
+
+            image.Crop(cropArea);
+            image.RePage(); // Clean up canvas metadata after cropping
+            image.Write(croppedPath);
+
+            return croppedPath;
         }
     }
 }
