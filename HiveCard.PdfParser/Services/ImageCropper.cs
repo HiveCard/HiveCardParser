@@ -6,16 +6,16 @@ namespace HiveCard.PdfParser.Services
 {
     public static class ImageCropper
     {
-        private static readonly int[] _accSummaryCoordinates = new int[] { 1050, 460, 0, 0, 1050, 460, 1340, 530, 1050, 460 };
-        private static readonly int[] _breakDownListCoordinates = new int[] { 2060, 2300, 0, 0, 2060, 2300, 200, 940, 2060, 2300 };
+        //private static readonly int[] _accSummaryCoordinates = new int[] { 1050, 460, 0, 0, 1050, 460, 1340, 530, 1050, 460 };
+        //private static readonly int[] _breakDownListCoordinates = new int[] { 2060, 2300, 0, 0, 2060, 2300, 200, 940, 2060, 2300 };
 
-        public static List<string> CropImages(List<string> imagePaths)
+        public static List<string> CropImages(List<string> imagePaths, int[] accountCoor, int[] transacCoor)
         {
             var croppedPaths = new List<string>();
 
             for (int i = 0; i < imagePaths.Count; i++)
             {
-                int[] coords = (i == 0) ? _accSummaryCoordinates : _breakDownListCoordinates;
+                int[] coords = (i == 0) ? accountCoor : transacCoor;
 
                 var croppedPath = CropImage(imagePaths[i], coords);
                 if (croppedPath != null)

@@ -5,15 +5,21 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>AnyCPU;x64;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="ESOA\BPIsample.pdf" />
+    <None Remove="ESOA\eastwest.pdf" />
     <None Remove="ESOA\sample.pdf" />
     <None Remove="Tesseract\tessdata\eng.traineddata" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="ESOA\sample.pdf">
+    <Content Include="ESOA\BPIsample.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ESOA\eastwest.pdf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Tesseract\tessdata\eng.traineddata">

@@ -9,11 +9,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HiveCard.PdfParser.Models;
+using HiveCard.PdfParser.Helpers;
 
 namespace HiveCard.PdfParser.Parsers
 {
-    public class BPIExtractor : IExtractor
+    public class BPIExtractor : ExtractorHelper, IExtractor
     {
+
+        #region NOTE: THESE VALUES ARE SUBJECT TO CHANGE
+        private int[] _accSummaryCoordinates = new int[] { 1050, 460, 0, 0, 1050, 460, 1340, 530, 1050, 460 };
+        private int[] _breakDownListCoordinates = new int[] { 2060, 2300, 0, 0, 2060, 2300, 200, 940, 2060, 2300 };
+        private int _skipPage = 2;
+        #endregion
+
+
         public BankStatement Run(string pdfPath)
         {
            
@@ -28,7 +37,7 @@ namespace HiveCard.PdfParser.Parsers
                 .ToList();
 
             // Crop images
-            var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList());
+            var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList(), _accSummaryCoordinates, _breakDownListCoordinates);
 
             var bankStatement = new BankStatement();
 
@@ -120,23 +129,23 @@ namespace HiveCard.PdfParser.Parsers
         private string GetTotalAmount(string str) => str;
         private string GetMinimumAmountDue(string str) => str;
 
-        private string CommonExtract(string str, int numSpace)
-        {
-            if (!string.IsNullOrEmpty(str))
-            {
-                try
-                {
-                    str = str.Replace("  ", " ");
-                    var token = str.Split(' ');
-                    var tmp = token.ToList();
-                    for (int i = numSpace - 1; i >= 0 && i < tmp.Count; i--)
-                        tmp.RemoveAt(i);
-                    return string.Join(" ", tmp);
-                }
-                catch { }
-            }
-            return str;
-        }
+        //private string CommonExtract(string str, int numSpace)
+        //{
+        //    if (!string.IsNullOrEmpty(str))
+        //    {
+        //        try
+        //        {
+        //            str = str.Replace("  ", " ");
+        //            var token = str.Split(' ');
+        //            var tmp = token.ToList();
+        //            for (int i = numSpace - 1; i >= 0 && i < tmp.Count; i--)
+        //                tmp.RemoveAt(i);
+        //            return string.Join(" ", tmp);
+        //        }
+        //        catch { }
+        //    }
+        //    return str;
+        //}
 
         public List<CardActivities> GetCardActivities(string[] lines)
         {
