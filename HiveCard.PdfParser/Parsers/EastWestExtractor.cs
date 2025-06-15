@@ -63,14 +63,16 @@ namespace HiveCard.PdfParser.Parsers
                 if (i == 0)
                 {
                     // First page - extract summary
-                  //  bankStatement.AccountNumber = GetAccountNumber(lines[38].Trim());
+                    
                     bankStatement.StatementDate = GetStatementDate(lines[0].Trim());
                     bankStatement.PaymentDueDate = GetPaymentDueDate(lines[2].Trim());
                     bankStatement.TotalAmount = GetTotalAmount(lines[10].Trim());
                     bankStatement.MinimumAmountDue = GetMinimumAmountDue(lines[12].Trim());
+                    
                 }
                 else
                 {
+                    bankStatement.AccountNumber = GetCardHolderWithNumber(lines);
                     bankStatement.Activities.AddRange(GetCardActivities(lines));
                 }
             }
@@ -114,6 +116,21 @@ namespace HiveCard.PdfParser.Parsers
             }
 
             return activities;
+        }
+
+        private string GetCardHolderWithNumber(string[] lines)
+        {
+            var pattern = @"\b\d{4}-\d{4}-\d{4}-\d{4}\b";
+
+            foreach (var line in lines)
+            {
+                if (Regex.IsMatch(line, pattern))
+                {
+                    return line.Trim();
+                }
+            }
+
+            return string.Empty;
         }
     }
 }
