@@ -72,7 +72,8 @@ namespace HiveCard.PdfParser.Parsers
                 }
                 else
                 {
-                    bankStatement.AccountNumber = GetCardHolderWithNumber(lines);
+                    //bankStatement.AccountNumber = GetCardHolderWithNumber(lines, bankStatement);
+                    GetCardHolderWithNumber(lines, bankStatement);
                     bankStatement.Activities.AddRange(GetCardActivities(lines));
                 }
             }
@@ -118,19 +119,20 @@ namespace HiveCard.PdfParser.Parsers
             return activities;
         }
 
-        private string GetCardHolderWithNumber(string[] lines)
+        private void GetCardHolderWithNumber(string[] lines, BankStatement bankStatement)
         {
-            var pattern = @"\b\d{4}-\d{4}-\d{4}-\d{4}\b";
+            var pattern = new Regex(@"^(?<name>.+?)\s+(?<number>\d{4}-\d{4}-\d{4}-\d{4})$");
 
             foreach (var line in lines)
             {
-                if (Regex.IsMatch(line, pattern))
+                var match = pattern.Match(line.Trim());
+                if (match.Success)
                 {
-                    return line.Trim();
+                    bankStatement.AccountNumber = match.Groups["number"].Value;
+     
+                    break;
                 }
             }
-
-            return string.Empty;
         }
     }
 }
