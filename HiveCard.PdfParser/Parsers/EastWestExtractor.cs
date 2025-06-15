@@ -85,78 +85,34 @@ namespace HiveCard.PdfParser.Parsers
         private string GetTotalAmount(string str) => str;
         private string GetMinimumAmountDue(string str) => str;
 
-        private List<CardActivities> GetCardActivities(string[] str)
+        private List<CardActivities> GetCardActivities(string[] rawText)
         {
-            List<CardActivities> activities = new List<CardActivities>();
-            if (str != null && str.Length > 3)
+            var lines = rawText
+             //.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries)
+             .Where(l => !string.IsNullOrWhiteSpace(l))
+             .ToList();
+
+            // Step 1: Determine how many transaction lines we have (e.g., 17)
+            int sectionSize = 17;
+
+            var transactionDates = lines.Take(sectionSize).ToList();
+            var postDates = lines.Skip(sectionSize).Take(sectionSize).ToList();
+            var descriptions = lines.Skip(sectionSize * 2).Take(sectionSize).ToList();
+            var amounts = lines.Skip(sectionSize * 3).Take(sectionSize).ToList();
+
+            List<CardActivities> activities = new();
+
+            for (int i = 0; i < sectionSize; i++)
             {
-                try
+                activities.Add(new CardActivities
                 {
-                    Regex r1 = new Regex(@"[a-zA-Z]{3,}\s[0-9]{1,2}");
-                    Regex r2 = new Regex(@"[a-zA-Z]{3,}[0-9]{1,2}");
-                    for (int i = 0; i < str.Length; i++)
-                    {
-                        CardActivities ca = new CardActivities();
-                        string act = str[i];
-
-                        act = act.Replace("  ", " "); // remove all double spacing
-                        if (act.StartsWith("Total", StringComparison.InvariantCultureIgnoreCase))
-                            break;
-
-                        // will be used for validation
-                        string dateValid1 = act.Substring(0, 5);
-                        string dateValid2 = act.Substring(0, 6);
-
-                        if ((r1.IsMatch(dateValid1) || r1.IsMatch(dateValid2)) ||
-                            (r2.IsMatch(dateValid2) || r2.IsMatch(dateValid2)))
-                        {
-                            var arr = act.Split(' ').ToList();
-
-                            #region GET TRANSACTION DATE
-                            if (r2.IsMatch(arr[0]))
-                            {
-                                ca.TransactionDate = arr[0];
-                                arr.RemoveAt(0);
-                            }
-                            else
-                            {
-                                ca.TransactionDate = string.Join(" ", arr[0], arr[1]);
-                                arr.RemoveAt(1);
-                                arr.RemoveAt(0);
-                            }
-                            #endregion
-
-                            #region GET POST DATE
-                            if (r2.IsMatch(arr[0]))
-                            {
-                                ca.PostDate = arr[0];
-                                arr.RemoveAt(0);
-                            }
-                            else
-                            {
-                                ca.PostDate = string.Join(" ", arr[0], arr[1]);
-                                arr.RemoveAt(1);
-                                arr.RemoveAt(0);
-                            }
-                            #endregion
-
-                            #region GET AMOUNT
-                            ca.Amount = arr.Last();
-                            arr.RemoveAt(arr.Count() - 1);
-                            #endregion
-
-                            #region GET DESCRIPTION
-                            ca.Description = string.Join(" ", arr.ToArray());
-                            #endregion
-
-
-                            activities.Add(ca);
-                        }
-                    }
-                }
-                catch (Exception)
-                { }
+                    TransactionDate = transactionDates[i],
+                    PostDate = postDates[i],
+                    Description = descriptions[i],
+                    Amount = amounts[i]
+                });
             }
+
             return activities;
         }
     }
