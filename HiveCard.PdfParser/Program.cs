@@ -7,7 +7,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        IExtractor extractor = new MetrobankExtractor();
-        BankStatement statement  = extractor.Run("ESOA/metrobank.pdf");
+        IExtractor extractor = new EastWestExtractor();
+        BankStatement statement  = extractor.Run("ESOA/eastwest.pdf");
     }
 }
