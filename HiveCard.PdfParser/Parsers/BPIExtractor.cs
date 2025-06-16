@@ -29,17 +29,18 @@ namespace HiveCard.PdfParser.Parsers
 
         public BankStatement Run(string pdfPath)
         {
-            var summaryCrop = new CropArea(460, 1340, 1340, 530);
-            var detailsCrop = new CropArea(2300, 200, 940, 2060);
+            var summaryCrop = new CropArea(1338, 540, 1046, 444);
+            var detailsCrop = new CropArea(130, 497, 2360, 2129);
 
             var imagePaths = PdfToImageHelper.ConvertPdfToImages(pdfPath);
 
-            // Define pages to skip if needed
-            var skipPages = new List<int> { 1 , imagePaths.Count - 1}; // Example: skip page 0
+
+            var pagesToScan = new List<int> { 0, 2 };
+
             var pagesToParse = imagePaths
-                .Select((path, index) => new { path, index })
-                .Where(x => !skipPages.Contains(x.index))
-                .ToList();
+               .Select((path, index) => new { path, index })
+               .Where(x => pagesToScan.Contains(x.index))
+               .ToList();
 
             // Crop images
             var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList(), summaryCrop, detailsCrop);
@@ -54,28 +55,32 @@ namespace HiveCard.PdfParser.Parsers
 
                 string[] lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
-                //Debugging: Uncomment to see the lines being processed
-                for (int x = 0; x < lines.Length; x++)
+
+                var sections = ParserUtils.SplitIntoSections(lines, line => line.Contains("Statement of Account", StringComparison.OrdinalIgnoreCase));
+                ////Debugging: Uncomment to see the lines being processed
+                //for (int x = 0; x < lines.Length; x++)
+                //{
+                //    Console.WriteLine($"{x}: {lines[x]}");
+                //}
+
+
+                if (i == 0 && sections.HeaderLines.Count >= 12)
                 {
-                    Console.WriteLine($"{x}: {lines[x]}");
-                }
+                    var cleaned = sections.HeaderLines
+                        .Where(l => !string.IsNullOrWhiteSpace(l))
+                        .Select(l => l.Trim())
+                        .ToList();
 
-
-
-                if (i == 0 && lines.Length >= 6)
-                {
-                    // First page - extract summary
-                    bankStatement.AccountNumber = GetAccountNumber(lines[10].Trim());
-                    bankStatement.StatementDate = GetStatementDate(lines[11].Trim());
-                    bankStatement.PaymentDueDate = GetPaymentDueDate(lines[12].Trim());
-                    bankStatement.TotalAmount = GetTotalAmount(lines[14].Trim());
-                    bankStatement.MinimumAmountDue = GetMinimumAmountDue(lines[16].Trim());
-
+                    bankStatement.StatementDate = cleaned[7];  // MARCH 27, 2025
+                    bankStatement.PaymentDueDate = cleaned[8];  // APRIL 16, 2025
+                    bankStatement.TotalAmount = cleaned[10]; // 149,838.74
+                    bankStatement.MinimumAmountDue = cleaned[11]; // 5,351.38
                 }
                 else
                 {
                     // Other pages - extract transactions
-                    bankStatement.Activities.AddRange(GetCardActivities(lines));
+                   bankStatement.AccountNumber = GetAccountNumber(sections.TransactionLines);
+                    bankStatement.Activities.AddRange(GetCardActivities(sections.TransactionLines));
                 }
 
 
@@ -84,132 +89,92 @@ namespace HiveCard.PdfParser.Parsers
             }
 
             // Optional: write JSON output
-            File.WriteAllText("Output/extracted.json", JsonConvert.SerializeObject(bankStatement, Formatting.Indented));
+            File.WriteAllText("Output/bpi_extracted.json", JsonConvert.SerializeObject(bankStatement, Formatting.Indented));
             return bankStatement;
         }
 
 
-        private string GetValueAfter(List<string> lines, string keyword)
+        private string GetValueAfterLabel(List<string> lines, string label)
         {
-            int index = lines.FindIndex(l => l.Equals(keyword, StringComparison.OrdinalIgnoreCase));
-            if (index >= 0 && index + 1 < lines.Count)
-                return lines[index + 1].Trim();
+            var cleaned = lines
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .Select(l => l.Trim())
+                .ToList();
+
+            for (int i = 0; i < cleaned.Count - 1; i++)
+            {
+                if (cleaned[i].Equals(label, StringComparison.OrdinalIgnoreCase))
+                {
+                    return cleaned[i + 1];
+                }
+            }
+
             return string.Empty;
         }
 
 
-        private List<ExtractedTransaction> ParseText(string ocrText)
+
+        private string GetAccountNumber(List<string> lines)
         {
-            var transactions = new List<ExtractedTransaction>();
-            var lines = ocrText.Split('\n');
+            // Match format: ######-#-##-########
+            var pattern = new Regex(@"\b(\d{6})-(\d)-(\d{2})-(\d{7})\b");
 
             foreach (var line in lines)
             {
-                // Example logic: 04/23/2024 MERALCO -1234.56
-                var parts = line.Trim().Split(' ', 3);
-                if (parts.Length < 3) continue;
-
-                if (DateTime.TryParse(parts[0], out var date) && decimal.TryParse(parts[2], out var amount))
+                var match = pattern.Match(line);
+                if (match.Success)
                 {
-                    transactions.Add(new ExtractedTransaction
-                    {
-                        Date = parts[0],
-                        Description = parts[1],
-                        Amount = amount
-                    });
+                    // Combine groups into a 16-digit credit card style format
+                    string rawDigits = $"{match.Groups[1].Value}{match.Groups[2].Value}{match.Groups[3].Value}{match.Groups[4].Value}";
+                    return Regex.Replace(rawDigits, @"(.{4})", "$1 ").Trim();  // e.g. 4608 8878 0524 7200
                 }
             }
 
-            return transactions;
+            return string.Empty;
         }
 
-        //private string GetAccountNumber(string str) => CommonExtract(str, 2);
-        //private string GetStatementDate(string str) => CommonExtract(str, 2);
-        //private string GetPaymentDueDate(string str) => CommonExtract(str, 3);
-        //private string GetTotalAmount(string str) => CommonExtract(str, 3);
-        //private string GetMinimumAmountDue(string str) => CommonExtract(str, 3);
-        private string GetAccountNumber(string str) => str;
-        private string GetStatementDate(string str) => str;
-        private string GetPaymentDueDate(string str) => str;
-        private string GetTotalAmount(string str) => str;
-        private string GetMinimumAmountDue(string str) => str;
+        private string GetStatementDate(List<string> headerLines)
+        {
+            return ParserUtils.GetValueAfterLabel(headerLines, "STATEMENT DATE");
+        }
 
-        //private string CommonExtract(string str, int numSpace)
-        //{
-        //    if (!string.IsNullOrEmpty(str))
-        //    {
-        //        try
-        //        {
-        //            str = str.Replace("  ", " ");
-        //            var token = str.Split(' ');
-        //            var tmp = token.ToList();
-        //            for (int i = numSpace - 1; i >= 0 && i < tmp.Count; i--)
-        //                tmp.RemoveAt(i);
-        //            return string.Join(" ", tmp);
-        //        }
-        //        catch { }
-        //    }
-        //    return str;
-        //}
+        private string GetPaymentDueDate(List<string> headerLines)
+        {
+            return ParserUtils.GetValueAfterLabel(headerLines, "PAYMENT DUE DATE");
+        }
 
-        public List<CardActivities> GetCardActivities(string[] lines)
+        private string GetTotalAmountDue(List<string> headerLines)
+        {
+            return ParserUtils.GetValueAfterLabel(headerLines, "TOTAL AMOUNT DUE");
+        }
+
+        private string GetMinimumAmountDue(List<string> headerLines)
+        {
+            return ParserUtils.GetValueAfterLabel(headerLines, "MINIMUM AMOUNT DUE");
+        }
+
+        private List<CardActivities> GetCardActivities(List<string> lines)
         {
             var activities = new List<CardActivities>();
 
-            if (lines == null || lines.Length < 4)
-                return activities;
+            // Matches BPI style: "March 27 March 27 Description 9,041.42"
+            var pattern = new Regex(
+                @"^([A-Za-z]+ \d{1,2})\s+([A-Za-z]+ \d{1,2})\s+(.+?)\s+([-]?\d{1,3}(?:,\d{3})*\.\d{2})$",
+                RegexOptions.Compiled);
 
-            try
+            foreach (var line in lines)
             {
-                for (int i = 0; i < lines.Length; i++)
+                var match = pattern.Match(line.Trim());
+                if (match.Success)
                 {
-                    string line = lines[i].Replace("  ", " "); // Normalize spacing
-
-                    if (line.StartsWith("Installment ", StringComparison.InvariantCultureIgnoreCase))
+                    activities.Add(new CardActivities
                     {
-                        for (int j = i + 1; j < lines.Length; j++)
-                        {
-                            line = lines[j].Replace("  ", " ");
-                            line = line.Replace("=:", ":");
-                            line = line.Replace("??? :", " :");
-
-                            if (line.StartsWith("S.I.P", StringComparison.InvariantCultureIgnoreCase))
-                                break;
-
-                            var tokens = line.Split(' ').ToList();
-
-                            if (tokens.Count < 6)
-                                continue; // Skip malformed lines
-
-                            var activity = new CardActivities();
-
-                            // Get Transaction Date (first 2 tokens)
-                            activity.TransactionDate = $"{tokens[0]} {tokens[1]}";
-                            tokens.RemoveAt(0);
-                            tokens.RemoveAt(0);
-
-                            // Get Post Date (next 2 tokens)
-                            activity.PostDate = $"{tokens[0]} {tokens[1]}";
-                            tokens.RemoveAt(0);
-                            tokens.RemoveAt(0);
-
-                            // Get Amount (last token)
-                            activity.Amount = tokens[^1];
-                            tokens.RemoveAt(tokens.Count - 1);
-
-                            // Remaining tokens form the Description
-                            activity.Description = string.Join(" ", tokens);
-
-                            activities.Add(activity);
-                        }
-
-                        break; // Exit outer loop after processing activities
-                    }
+                        TransactionDate = match.Groups[1].Value,
+                        PostDate = match.Groups[2].Value,
+                        Description = match.Groups[3].Value.Trim(),
+                        Amount = match.Groups[4].Value.Trim()
+                    });
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error parsing card activities: {ex.Message}");
             }
 
             return activities;
