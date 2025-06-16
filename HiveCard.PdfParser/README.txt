@@ -18,3 +18,15 @@
 - Tesseract
 - Magick.NET-Q16-AnyCPU
 - Newtonsoft.Json
+
+
+
+
+HiveCard.PdfParser
+*.Net 8.0 Framework
+*Tesseract 5.20
+*Magick.Net-Q16-AnyCPU 13.6.0
+*ghostscript 10.05.1 (https://ghostscript.com/releases/gsdnld.html)
+*Newtonsoft.Json 13.0.3
+*eng.traineddata (tesseract/tessdata/) from https://github.com/tesseract-ocr/tessdata
+*SixLabors.ImageSharp 3.1.10

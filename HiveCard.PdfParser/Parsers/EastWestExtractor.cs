@@ -1,4 +1,5 @@
 ﻿using HiveCard.PdfParser.Helpers;
+using HiveCard.PdfParser.Interfaces;
 using HiveCard.PdfParser.Models;
 using HiveCard.PdfParser.Services;
 using Newtonsoft.Json;
@@ -21,6 +22,11 @@ namespace HiveCard.PdfParser.Parsers
 
         public BankStatement Run(string pdfPath)
         {
+
+            var summaryCrop = new CropArea(600, 1160, 360, 530);
+            var detailsCrop = new CropArea(1550, 175, 570, 1850);
+
+
             var imagePaths = PdfToImageHelper.ConvertPdfToImages(pdfPath);
 
 
@@ -37,7 +43,7 @@ namespace HiveCard.PdfParser.Parsers
 
 
             // Crop images
-            var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList(), _accSummaryCoordinates, _breakDownListCoordinates);
+            var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList(), summaryCrop, detailsCrop);
 
             var bankStatement = new BankStatement();
 

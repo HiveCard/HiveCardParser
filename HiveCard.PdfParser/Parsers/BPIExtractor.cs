@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HiveCard.PdfParser.Models;
 using HiveCard.PdfParser.Helpers;
+using HiveCard.PdfParser.Interfaces;
 
 namespace HiveCard.PdfParser.Parsers
 {
@@ -19,13 +20,17 @@ namespace HiveCard.PdfParser.Parsers
         #region NOTE: THESE VALUES ARE SUBJECT TO CHANGE
         private int[] _accSummaryCoordinates = new int[] { 1050, 460, 0, 0, 1050, 460, 1340, 530, 1050, 460 };
         private int[] _breakDownListCoordinates = new int[] { 2060, 2300, 0, 0, 2060, 2300, 200, 940, 2060, 2300 };
+
+
+
         private int _skipPage = 2;
         #endregion
 
 
         public BankStatement Run(string pdfPath)
         {
-           
+            var summaryCrop = new CropArea(460, 1340, 1340, 530);
+            var detailsCrop = new CropArea(2300, 200, 940, 2060);
 
             var imagePaths = PdfToImageHelper.ConvertPdfToImages(pdfPath);
 
@@ -37,7 +42,7 @@ namespace HiveCard.PdfParser.Parsers
                 .ToList();
 
             // Crop images
-            var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList(), _accSummaryCoordinates, _breakDownListCoordinates);
+            var croppedPaths = ImageCropper.CropImages(pagesToParse.Select(x => x.path).ToList(), summaryCrop, detailsCrop);
 
             var bankStatement = new BankStatement();
 
