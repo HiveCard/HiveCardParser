@@ -7,7 +7,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        IExtractor extractor = new BPIExtractor();
-        BankStatement statement  = extractor.Run("ESOA/bpi.pdf");
+        IExtractor extractor =  ExtractorFactory.GetExtractor("Metrobank");
+        BankStatement statement  = extractor.Run("ESOA/metrobank.pdf");
     }
 }
